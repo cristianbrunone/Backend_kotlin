@@ -1,0 +1,6 @@
+image:
+  file: .gitpod.dockerfile  # Opcional, solo si necesitas un Dockerfile personalizado
+
+tasks:
+  - init: ./gradlew build   # Comando que se ejecutará al iniciar el entorno
+  - command: ./gradlew run   # Comando que se ejecutará para iniciar la aplicación
