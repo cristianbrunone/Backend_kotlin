@@ -1,3 +1,4 @@
+// FirebaseAuthService.kt
 package com.example.utils
 
 import com.google.firebase.auth.FirebaseAuth
@@ -8,6 +9,7 @@ object FirebaseAuthService {
         return try {
             FirebaseAuth.getInstance().verifyIdToken(idToken)
         } catch (e: Exception) {
+            println("Error verifying token: ${e.message}")
             null
         }
     }
