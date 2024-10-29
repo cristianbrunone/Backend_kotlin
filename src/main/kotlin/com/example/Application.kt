@@ -18,22 +18,23 @@ fun Application.module() {
     install(WebSockets) // Instala WebSockets
 
     install(Authentication) {
-        jwt("auth-jwt") {
-            skipWhen { true } // Salta la verificación de JWT de Ktor
-    
-            validate { credential ->
-                // Obtén el ID token directamente del claim
-                val idToken = credential.payload.getClaim("user_id").asString()
-                // Verifica el token usando tu servicio
-                val firebaseToken = FirebaseAuthService.verifyToken(idToken)
-                if (firebaseToken != null) {
-                    UserIdPrincipal(firebaseToken.uid)
-                } else {
-                    null
-                }
+    jwt("auth-jwt") {
+        skipWhen { true } // Salta la verificación de JWT de Ktor
+
+        validate { credential ->
+            // Obtén el ID token directamente desde la carga útil del token
+            val idToken = credential.payload.getClaim("sub").asString() // 'sub' es el UID en el token de Firebase
+
+            // Verifica el token usando tu servicio
+            val firebaseToken = FirebaseAuthService.verifyToken(idToken)
+            if (firebaseToken != null) {
+                UserIdPrincipal(firebaseToken.uid) // Retorna el principal del usuario
+            } else {
+                null // Token inválido
             }
         }
     }
-    
+}
+
     configureRouting() // Configura las rutas
 }
