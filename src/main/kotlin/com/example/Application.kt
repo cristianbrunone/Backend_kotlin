@@ -7,13 +7,24 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.websocket.*
+import io.ktor.server.plugins.cors.routing.* // Cambiado
+import io.ktor.http.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
 }
 
 fun Application.module() {
-    FirebaseConfig.initialize() // Inicializa Firebase
+    FirebaseConfig.initialize()
+    
+     install(CORS) {
+        allowHost("192.168.100.53:8080") // Permitir tu IP local
+        allowMethod(HttpMethod.Post)
+        allowHeader(HttpHeaders.Authorization)
+        allowHeader(HttpHeaders.ContentType)
+    }
 
     install(WebSockets) // Instala WebSockets
 

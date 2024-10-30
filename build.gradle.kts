@@ -34,6 +34,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore:25.1.1")
     implementation("com.google.firebase:firebase-storage:21.0.1")
     implementation("com.auth0:java-jwt:4.4.0") 
+    implementation("io.ktor:ktor-server-cors:$ktor_version")
 
     testImplementation("io.ktor:ktor-server-tests:$ktor_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
