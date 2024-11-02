@@ -1,5 +1,5 @@
 // FirebaseAuthService.kt
-package com.example.utils
+package com.example.application.services
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseToken

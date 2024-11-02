@@ -3,10 +3,13 @@ package com.example.plugins
 
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
-import com.example.auth.authRoutes // Asegúrate de importar correctamente
+import com.example.routes.authRoutes
+import com.example.routes.firebaseTokenRoutes
+import com.example.domain.ports.FirebaseTokenRepository // Asegúrate de importar el repositorio
 
-fun Application.configureRouting() {
+fun Application.configureRouting(firebaseTokenRepository: FirebaseTokenRepository) {
     routing {
-        authRoutes() // Esto llama a la función de rutas de autenticación
+        authRoutes()
+        firebaseTokenRoutes(firebaseTokenRepository) // Pasar el repositorio aquí
     }
 }
