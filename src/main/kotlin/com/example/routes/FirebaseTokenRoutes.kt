@@ -41,20 +41,17 @@ fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository, verifyUserReg
                     if (verificationResponse.success) {
                         call.respondText("Usuario autenticado con UID: $userId, navegación permitida", status = HttpStatusCode.OK)
                     } else {
-        } catch (e: Exception) {
-            call.application.environment.log.error("Error al procesar el token: ${e.message}", e)
-            call.respond(HttpStatusCode.InternalServerError, "Error interno del servidor")
-        }
-    }
-
                         call.respond(HttpStatusCode.Conflict, "Usuario debe completar el registro en ${verificationResponse.redirectUrl ?: "/complete-registration"}")
                     }
                 }
             } else {
                 call.respond(HttpStatusCode.Unauthorized, "Token inválido o expirado")
             }
-    
-
+        } catch (e: Exception) {
+            call.application.environment.log.error("Error al procesar el token: ${e.message}", e)
+            call.respond(HttpStatusCode.InternalServerError, "Error interno del servidor")
+        }
+    }
 
 
 
