@@ -2,9 +2,12 @@ package com.example
 
 import com.example.plugins.configureRouting
 import com.example.plugins.FirebaseConfig
+import com.example.application.usecases.VerifyUserRegistrationUseCase
 import com.example.application.services.FirebaseAuthService
 import com.example.infrastructure.repository.FirebaseTokenRepositoryImpl
+import com.example.infrastructure.repository.UserDataRepositoryImpl
 import com.example.domain.ports.FirebaseTokenRepository
+import com.example.domain.ports.UserDataRepository
 import io.github.cdimascio.dotenv.dotenv
 import com.mongodb.kotlin.client.coroutine.MongoClient
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
@@ -78,6 +81,12 @@ fun Application.module() {
     // Crear el repositorio de tokens de Firebase
     val firebaseTokenRepository: FirebaseTokenRepository = FirebaseTokenRepositoryImpl(mongoDb)
 
+     // Crear el repositorio de datos de usuario
+    val userDataRepository: UserDataRepository = UserDataRepositoryImpl(mongoDb) // Asegúrate de tener esta implementación
+
+     // Crear el caso de uso
+    val verifyUserRegistrationUseCase = VerifyUserRegistrationUseCase(userDataRepository)
+
     // Configurar las rutas, pasando el repositorio
-    configureRouting(firebaseTokenRepository)
+    configureRouting(firebaseTokenRepository, verifyUserRegistrationUseCase)
 }

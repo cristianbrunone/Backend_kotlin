@@ -2,9 +2,12 @@ package com.example.routes
 
 import com.example.domain.entity.FirebaseToken
 import com.example.domain.ports.FirebaseTokenRepository
+import com.example.application.usecases.VerifyUserRegistrationUseCase
 import com.example.application.request.TokenRequest
+import com.example.application.request.VerificationRequest
 import com.example.application.request.toDomain
 import com.example.application.services.TokenVerifier
+import com.example.application.response.VerificationResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
@@ -13,9 +16,8 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.*
 import org.bson.types.ObjectId
 
-fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository) {
+fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository, verifyUserRegistrationUseCase: VerifyUserRegistrationUseCase) {
 
-    
     route("/secure") {
         post("/firebase-token") {
             val idToken = call.request.headers["Authorization"]?.replace("Bearer ", "")
@@ -34,22 +36,29 @@ fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository) {
                     // Usuario ya existe; responder sin insertar
                     call.respondText("Usuario ya autenticado con UID: $userId", status = HttpStatusCode.OK)
                 } else {
-                    // Crear nuevo token y guardar
-                    val tokenRequest = TokenRequest(idToken = idToken)
-                    val domainToken = tokenRequest.toDomain(userId)
-                    val insertedId = repository.insertOne(domainToken)
+                    // Aquí verificamos si el usuario necesita completar el registro
+                    val verificationResponse = verifyUserRegistrationUseCase.execute(userId)
                     
-                    if (insertedId != null) {
-                        call.respondText("Usuario autenticado con UID: ${domainToken.userId}, Token guardado con ID: $insertedId")
+                    if (verificationResponse.success) {
+                        // Si el registro está completo, crear nuevo token y guardar
+                        val tokenRequest = TokenRequest(idToken = idToken)
+                        val domainToken = tokenRequest.toDomain(userId)
+                        val insertedId = repository.insertOne(domainToken)
+                        
+                        if (insertedId != null) {
+                            call.respondText("Usuario autenticado con UID: ${domainToken.userId}, Token guardado con ID: $insertedId", status = HttpStatusCode.OK)
+                        } else {
+                            call.respond(HttpStatusCode.InternalServerError, "Error al guardar el token")
+                        }
                     } else {
-                        call.respond(HttpStatusCode.InternalServerError, "Error al guardar el token")
+                        // Si el registro no está completo, redirigir al usuario
+                        call.respond(HttpStatusCode.Found, verificationResponse.redirectUrl ?: "/complete-registration")
                     }
                 }
             } else {
                 call.respond(HttpStatusCode.Unauthorized, "Token inválido o expirado")
             }
         }
-
 
         delete("/{id?}") {
             val id = call.parameters["id"] ?: return@delete call.respondText(
