@@ -4,10 +4,8 @@ import com.example.domain.entity.FirebaseToken
 import com.example.domain.ports.FirebaseTokenRepository
 import com.example.application.usecases.VerifyUserRegistrationUseCase
 import com.example.application.request.TokenRequest
-import com.example.application.request.VerificationRequest
 import com.example.application.request.toDomain
 import com.example.application.services.TokenVerifier
-import com.example.application.response.VerificationResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
@@ -17,59 +15,65 @@ import io.ktor.server.routing.*
 import org.bson.types.ObjectId
 
 fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository, verifyUserRegistrationUseCase: VerifyUserRegistrationUseCase) {
-
     route("/secure") {
-        post("/firebase-token") {
-            val idToken = call.request.headers["Authorization"]?.replace("Bearer ", "")
-            if (idToken == null) {
-                call.respond(HttpStatusCode.BadRequest, "Falta el token de autorización")
-                return@post
-            }
-            
+    post("/firebase-token") {
+        val idToken = call.request.headers["Authorization"]?.replace("Bearer ", "")
+        if (idToken == null) {
+            call.respond(HttpStatusCode.BadRequest, "Falta el token de autorización")
+            return@post
+        }
+
+        try {
             // Verificar el token de Firebase
             val firebaseToken = TokenVerifier.verify(idToken)
             if (firebaseToken != null) {
                 val userId = firebaseToken.uid
-                val existingUser = repository.findByUserId(userId) // Verificar existencia
+                val existingToken = repository.findByUserId(userId)
 
-                if (existingUser != null) {
-                    // Usuario ya existe; responder sin insertar
-                    call.respondText("Usuario ya autenticado con UID: $userId", status = HttpStatusCode.OK)
+                if (existingToken != null) {
+                    // Si el token ya está guardado, responder con 200 y continuar
+                    call.application.environment.log.info("Token ya existente para UID: $userId, se continúa sin insertar")
+                    call.respond(HttpStatusCode.OK, "Token ya existe, navegación permitida")
                 } else {
-                    // Aquí verificamos si el usuario necesita completar el registro
+                    // Si el token no existe, verificar el registro
                     val verificationResponse = verifyUserRegistrationUseCase.execute(userId)
-                    
+
                     if (verificationResponse.success) {
-                        // Si el registro está completo, crear nuevo token y guardar
-                        val tokenRequest = TokenRequest(idToken = idToken)
-                        val domainToken = tokenRequest.toDomain(userId)
-                        val insertedId = repository.insertOne(domainToken)
-                        
-                        if (insertedId != null) {
-                            call.respondText("Usuario autenticado con UID: ${domainToken.userId}, Token guardado con ID: $insertedId", status = HttpStatusCode.OK)
-                        } else {
-                            call.respond(HttpStatusCode.InternalServerError, "Error al guardar el token")
-                        }
+                        call.respondText("Usuario autenticado con UID: $userId, navegación permitida", status = HttpStatusCode.OK)
                     } else {
-                        // Si el registro no está completo, redirigir al usuario
-                        call.respond(HttpStatusCode.Found, verificationResponse.redirectUrl ?: "/complete-registration")
+        } catch (e: Exception) {
+            call.application.environment.log.error("Error al procesar el token: ${e.message}", e)
+            call.respond(HttpStatusCode.InternalServerError, "Error interno del servidor")
+        }
+    }
+
+                        call.respond(HttpStatusCode.Conflict, "Usuario debe completar el registro en ${verificationResponse.redirectUrl ?: "/complete-registration"}")
                     }
                 }
             } else {
                 call.respond(HttpStatusCode.Unauthorized, "Token inválido o expirado")
             }
-        }
+    
+
+
+
+
 
         delete("/{id?}") {
             val id = call.parameters["id"] ?: return@delete call.respondText(
                 text = "Missing Firebase token id",
                 status = HttpStatusCode.BadRequest
             )
-            val deleteCount: Long = repository.deleteById(ObjectId(id))
-            if (deleteCount == 1L) {
-                return@delete call.respondText("Firebase Token deleted successfully", status = HttpStatusCode.OK)
+            try {
+                val deleteCount: Long = repository.deleteById(id)  // ID como String
+                if (deleteCount == 1L) {
+                    call.respondText("Firebase Token deleted successfully", status = HttpStatusCode.OK)
+                } else {
+                    call.respondText("Firebase Token not found", status = HttpStatusCode.NotFound)
+                }
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid ID format")
             }
-            return@delete call.respondText("Firebase Token not found", status = HttpStatusCode.NotFound)
         }
 
         get("/{id?}") {
@@ -80,9 +84,16 @@ fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository, verifyUserReg
                     status = HttpStatusCode.BadRequest
                 )
             }
-            repository.findById(ObjectId(id))?.let {
-                call.respond(it)
-            } ?: call.respondText("No records found for id $id", status = HttpStatusCode.NotFound)
+            try {
+                val token = repository.findById(id)  // ID como String
+                if (token != null) {
+                    call.respond(token)
+                } else {
+                    call.respondText("No records found for id $id", status = HttpStatusCode.NotFound)
+                }
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid ID format")
+            }
         }
 
         patch("/{id?}") {
@@ -90,12 +101,16 @@ fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository, verifyUserReg
                 text = "Missing Firebase token id",
                 status = HttpStatusCode.BadRequest
             )
-            val updatedToken = call.receive<FirebaseToken>()
-            val updatedCount = repository.updateOne(ObjectId(id), updatedToken)
-            call.respondText(
-                text = if (updatedCount == 1L) "Firebase Token updated successfully" else "Firebase Token not found",
-                status = if (updatedCount == 1L) HttpStatusCode.OK else HttpStatusCode.NotFound
-            )
+            try {
+                val updatedToken = call.receive<FirebaseToken>()
+                val updatedCount = repository.updateOne(id, updatedToken)  // ID como String
+                call.respondText(
+                    text = if (updatedCount == 1L) "Firebase Token updated successfully" else "Firebase Token not found",
+                    status = if (updatedCount == 1L) HttpStatusCode.OK else HttpStatusCode.NotFound
+                )
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid ID format")
+            }
         }
     }
 }

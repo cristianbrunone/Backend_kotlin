@@ -12,7 +12,6 @@ data class TokenRequest(
 
 fun TokenRequest.toDomain(userId: String): FirebaseToken {
     return FirebaseToken(
-        id = ObjectId(), // Generar un nuevo ObjectId para la entidad
         userId = userId, // Asigna el userId extraído después de verificar el token
         token = idToken
     )

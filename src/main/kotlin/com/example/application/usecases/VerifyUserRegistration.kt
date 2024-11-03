@@ -7,6 +7,8 @@ class VerifyUserRegistrationUseCase(
     private val userDataRepository: UserDataRepository // Repositorio para acceder a la información del usuario
 ) {
     suspend fun execute(userId: String): VerificationResponse {
+        
+
         val userDetails = userDataRepository.findByUserId(userId)
 
         return if (userDetails != null && userDetails.isComplete()) {

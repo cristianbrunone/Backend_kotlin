@@ -81,12 +81,12 @@ fun Application.module() {
     // Crear el repositorio de tokens de Firebase
     val firebaseTokenRepository: FirebaseTokenRepository = FirebaseTokenRepositoryImpl(mongoDb)
 
-     // Crear el repositorio de datos de usuario
+    // Crear el repositorio de datos de usuario
     val userDataRepository: UserDataRepository = UserDataRepositoryImpl(mongoDb) // Asegúrate de tener esta implementación
 
-     // Crear el caso de uso
+    // Crear el caso de uso
     val verifyUserRegistrationUseCase = VerifyUserRegistrationUseCase(userDataRepository)
 
-    // Configurar las rutas, pasando el repositorio
-    configureRouting(firebaseTokenRepository, verifyUserRegistrationUseCase)
+    // Configurar las rutas, pasando los repositorios
+    configureRouting(firebaseTokenRepository, verifyUserRegistrationUseCase, userDataRepository)
 }

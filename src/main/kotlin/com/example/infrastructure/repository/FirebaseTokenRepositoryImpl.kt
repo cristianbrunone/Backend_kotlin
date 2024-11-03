@@ -34,24 +34,36 @@ class FirebaseTokenRepositoryImpl(
         }
     }
 
-    override suspend fun deleteById(objectId: ObjectId): Long {
-        try {
+    override suspend fun deleteById(id: String): Long {
+        return try {
+            val objectId = ObjectId(id)  // Convertir String a ObjectId
             val result = mongoDatabase.getCollection<FirebaseToken>(TOKEN_COLLECTION)
                 .deleteOne(Filters.eq("_id", objectId))
-            return result.deletedCount
+            result.deletedCount
         } catch (e: MongoException) {
             System.err.println("Unable to delete due to an error: $e")
+            0
+        } catch (e: IllegalArgumentException) {
+            System.err.println("Invalid ID format: $e")
+            0
         }
-        return 0
     }
 
-    override suspend fun findById(objectId: ObjectId): FirebaseToken? =
-        mongoDatabase.getCollection<FirebaseToken>(TOKEN_COLLECTION)
-            .find(Filters.eq("_id", objectId))
-            .firstOrNull()
+    override suspend fun findById(id: String): FirebaseToken? {
+        return try {
+            val objectId = ObjectId(id)  // Convertir String a ObjectId
+            mongoDatabase.getCollection<FirebaseToken>(TOKEN_COLLECTION)
+                .find(Filters.eq("_id", objectId))
+                .firstOrNull()
+        } catch (e: IllegalArgumentException) {
+            System.err.println("Invalid ID format: $e")
+            null
+        }
+    }
 
-    override suspend fun updateOne(objectId: ObjectId, firebaseToken: FirebaseToken): Long {
-        try {
+    override suspend fun updateOne(id: String, firebaseToken: FirebaseToken): Long {
+        return try {
+            val objectId = ObjectId(id)  // Convertir String a ObjectId
             val query = Filters.eq("_id", objectId)
             val updates = Updates.combine(
                 Updates.set(FirebaseToken::userId.name, firebaseToken.userId),
@@ -61,11 +73,14 @@ class FirebaseTokenRepositoryImpl(
             val options = UpdateOptions().upsert(true)
             val result = mongoDatabase.getCollection<FirebaseToken>(TOKEN_COLLECTION)
                 .updateOne(query, updates, options)
-            return result.modifiedCount
+            result.modifiedCount
+        } catch (e: IllegalArgumentException) {
+            System.err.println("Invalid ID format: $e")
+            0
         } catch (e: MongoException) {
             System.err.println("Unable to update due to an error: $e")
+            0
         }
-        return 0
     }
 
     // Implementación de findByUserId
