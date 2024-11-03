@@ -15,6 +15,7 @@ import org.bson.types.ObjectId
 
 fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository) {
 
+    
     route("/secure") {
         post("/firebase-token") {
             val idToken = call.request.headers["Authorization"]?.replace("Bearer ", "")
@@ -22,20 +23,33 @@ fun Route.firebaseTokenRoutes(repository: FirebaseTokenRepository) {
                 call.respond(HttpStatusCode.BadRequest, "Falta el token de autorización")
                 return@post
             }
+            
+            // Verificar el token de Firebase
             val firebaseToken = TokenVerifier.verify(idToken)
             if (firebaseToken != null) {
-                val tokenRequest = TokenRequest(idToken = idToken)
-                val domainToken = tokenRequest.toDomain(firebaseToken.uid)
-                val insertedId = repository.insertOne(domainToken)
-                if (insertedId != null) {
-                    call.respondText("Usuario autenticado con UID: ${domainToken.userId}, Token guardado con ID: $insertedId")
+                val userId = firebaseToken.uid
+                val existingUser = repository.findByUserId(userId) // Verificar existencia
+
+                if (existingUser != null) {
+                    // Usuario ya existe; responder sin insertar
+                    call.respondText("Usuario ya autenticado con UID: $userId", status = HttpStatusCode.OK)
                 } else {
-                    call.respond(HttpStatusCode.InternalServerError, "Error al guardar el token")
+                    // Crear nuevo token y guardar
+                    val tokenRequest = TokenRequest(idToken = idToken)
+                    val domainToken = tokenRequest.toDomain(userId)
+                    val insertedId = repository.insertOne(domainToken)
+                    
+                    if (insertedId != null) {
+                        call.respondText("Usuario autenticado con UID: ${domainToken.userId}, Token guardado con ID: $insertedId")
+                    } else {
+                        call.respond(HttpStatusCode.InternalServerError, "Error al guardar el token")
+                    }
                 }
             } else {
                 call.respond(HttpStatusCode.Unauthorized, "Token inválido o expirado")
             }
         }
+
 
         delete("/{id?}") {
             val id = call.parameters["id"] ?: return@delete call.respondText(

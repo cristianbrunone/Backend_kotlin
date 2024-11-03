@@ -11,25 +11,27 @@ import kotlinx.coroutines.flow.firstOrNull
 import org.bson.BsonValue
 import org.bson.types.ObjectId
 
-
 class FirebaseTokenRepositoryImpl(
     private val mongoDatabase: MongoDatabase
 ) : FirebaseTokenRepository {
     companion object {
         const val TOKEN_COLLECTION = "usuarios"
     }
-    
 
     override suspend fun insertOne(firebaseToken: FirebaseToken): BsonValue? {
-        try {
-            val result = mongoDatabase.getCollection<FirebaseToken>(TOKEN_COLLECTION).insertOne(
-                firebaseToken
-            )
-            return result.insertedId
+        return try {
+            val existingUser = findByUserId(firebaseToken.userId)
+            if (existingUser != null) {
+                println("User with userId ${firebaseToken.userId} already exists. Authentication successful.")
+                null
+            } else {
+                val result = mongoDatabase.getCollection<FirebaseToken>(TOKEN_COLLECTION).insertOne(firebaseToken)
+                result.insertedId
+            }
         } catch (e: MongoException) {
             System.err.println("Unable to insert due to an error: $e")
+            null
         }
-        return null
     }
 
     override suspend fun deleteById(objectId: ObjectId): Long {
@@ -45,7 +47,6 @@ class FirebaseTokenRepositoryImpl(
 
     override suspend fun findById(objectId: ObjectId): FirebaseToken? =
         mongoDatabase.getCollection<FirebaseToken>(TOKEN_COLLECTION)
-            .withDocumentClass<FirebaseToken>()
             .find(Filters.eq("_id", objectId))
             .firstOrNull()
 
@@ -66,4 +67,10 @@ class FirebaseTokenRepositoryImpl(
         }
         return 0
     }
+
+    // Implementación de findByUserId
+    override suspend fun findByUserId(userId: String): FirebaseToken? =
+        mongoDatabase.getCollection<FirebaseToken>(TOKEN_COLLECTION)
+            .find(Filters.eq("userId", userId))
+            .firstOrNull()
 }

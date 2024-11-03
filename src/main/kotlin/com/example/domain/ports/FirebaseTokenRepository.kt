@@ -23,4 +23,6 @@ interface FirebaseTokenRepository {
      que podría representar el número de documentos actualizados. */
     suspend fun updateOne(objectId: ObjectId, firebaseToken: FirebaseToken): Long
 
+    // Nuevo método para buscar por userId
+    suspend fun findByUserId(userId: String): FirebaseToken?
 }
