@@ -78,6 +78,8 @@ fun Application.module() {
     val mongoClient: MongoClient = MongoClient.create(mongoUri)
     val mongoDb: MongoDatabase = mongoClient.getDatabase(mongoDatabase)
 
+ 
+
     // Crear el repositorio de tokens de Firebase
     val firebaseTokenRepository: FirebaseTokenRepository = FirebaseTokenRepositoryImpl(mongoDb)
 
