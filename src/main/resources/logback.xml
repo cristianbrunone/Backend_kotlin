@@ -1,12 +1,21 @@
 <configuration>
+    <!-- Appender para salida estándar en consola -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+
+    <!-- Logger global para la aplicación -->
     <root level="trace">
         <appender-ref ref="STDOUT"/>
     </root>
+
+    <!-- Configuración para loggers específicos -->
     <logger name="org.eclipse.jetty" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
+
+    <!-- Aumentar el nivel de log para MongoDB -->
+    <logger name="org.mongodb.driver" level="INFO"/>
+    <logger name="org.mongodb" level="INFO"/>
 </configuration>
